@@ -1,7 +1,11 @@
 import type { Product } from "@/types/product";
 
+// Server-side (SSR inside container) uses the Docker service name.
+// Client-side (browser) uses the public URL baked at build time.
 const PRODUCT_SERVICE_URL =
-  process.env.NEXT_PUBLIC_PRODUCT_SERVICE_URL || "http://localhost:4001";
+  typeof window === "undefined"
+    ? (process.env.PRODUCT_SERVICE_URL || "http://localhost:4001")
+    : (process.env.NEXT_PUBLIC_PRODUCT_SERVICE_URL || "http://localhost:4001");
 
 export async function getProducts(
   category?: string,

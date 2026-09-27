@@ -1,0 +1,81 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_PRODUCT_SERVICE_URL: http://localhost:4001
+        NEXT_PUBLIC_CART_SERVICE_URL: http://localhost:4002
+    container_name: ecommerce-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - PRODUCT_SERVICE_URL=http://product-service:4001
+    depends_on:
+      product-service:
+        condition: service_healthy
+      cart-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - ecommerce-network
+
+  product-service:
+    build:
+      context: ./services/product-service
+    container_name: ecommerce-product
+    ports:
+      - "4001:4001"
+    env_file:
+      - ./services/product-service/.env
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - ecommerce-network
+
+  cart-service:
+    build:
+      context: ./services/cart-service
+    container_name: ecommerce-cart
+    ports:
+      - "4002:4002"
+    env_file:
+      - ./services/cart-service/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - ecommerce-network
+
+  redis:
+    image: redis:8-alpine
+    container_name: ecommerce-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-network
+
+networks:
+  ecommerce-network:
+    driver: bridge

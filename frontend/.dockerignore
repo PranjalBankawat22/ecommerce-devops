@@ -1,8 +1,12 @@
-node_modules/
-.next/
-.git/
+node_modules
+.next
+.git
+.gitignore
+Dockerfile
 .env
 .env.local
 .env.*.local
 npm-debug.log*
+pnpm-debug.log*
 *.tsbuildinfo
+README.md
