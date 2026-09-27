@@ -1,0 +1,17 @@
+import Redis from 'ioredis';
+
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+
+export const redis = new Redis(REDIS_URL);
+
+redis.on('connect', () => {
+  console.log('[redis] Connected to Redis');
+});
+
+redis.on('error', (err) => {
+  console.error('[redis] Connection error:', err);
+});
+
+redis.on('close', () => {
+  console.log('[redis] Connection closed');
+});

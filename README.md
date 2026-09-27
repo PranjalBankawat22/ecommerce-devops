@@ -1,0 +1,1 @@
+This is a demo application to test GITOps using argocd, jenkins, helm, aws.
