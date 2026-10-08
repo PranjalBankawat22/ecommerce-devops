@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: product-service-config
+  labels:
+    app: product-service
+
+data:
+  PORT: {{ .Values.productService.config.port | quote }}
+  CORS_ORIGIN: {{ .Values.productService.config.corsOrigin | quote }}

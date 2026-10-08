@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: cart-service-config
+  labels:
+    app: cart-service
+
+data:
+  PORT: {{ .Values.cartService.config.port | quote }}
+  REDIS_URL: {{ .Values.cartService.config.redisUrl | quote }}
+  PRODUCT_SERVICE_URL: {{ .Values.cartService.config.productServiceUrl | quote }}
+  CORS_ORIGIN: {{ .Values.cartService.config.corsOrigin | quote }}

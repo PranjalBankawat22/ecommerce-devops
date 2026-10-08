@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: cart-service
+  labels:
+    app: cart-service
+
+spec:
+  replicas: {{ .Values.cartService.replicaCount }}
+
+  selector:
+    matchLabels:
+      app: cart-service
+
+  template:
+    metadata:
+      labels:
+        app: cart-service
+
+    spec:
+      containers:
+        - name: cart-service
+          image: "{{ .Values.cartService.image.repository }}:{{ .Values.cartService.image.tag }}"
+          imagePullPolicy: {{ .Values.cartService.image.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.cartService.service.targetPort }}
+              protocol: TCP
+
+          envFrom:
+            - configMapRef:
+                name: cart-service-config
+
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.cartService.probes.readiness.path }}
+              port: {{ .Values.cartService.service.targetPort }}
+            initialDelaySeconds: {{ .Values.cartService.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.cartService.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.cartService.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.cartService.probes.readiness.failureThreshold }}
+
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.cartService.probes.liveness.path }}
+              port: {{ .Values.cartService.service.targetPort }}
+            initialDelaySeconds: {{ .Values.cartService.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.cartService.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.cartService.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.cartService.probes.liveness.failureThreshold }}

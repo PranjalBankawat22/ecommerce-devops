@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: redis
+  labels:
+    app: redis
+
+spec:
+  type: {{ .Values.redis.service.type }}
+
+  selector:
+    app: redis
+
+  ports:
+    - name: redis
+      protocol: TCP
+      port: {{ .Values.redis.service.port }}
+      targetPort: {{ .Values.redis.service.targetPort }}

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: product-service
+  labels:
+    app: product-service
+
+spec:
+  replicas: {{ .Values.productService.replicaCount }}
+
+  selector:
+    matchLabels:
+      app: product-service
+
+  template:
+    metadata:
+      labels:
+        app: product-service
+
+    spec:
+      containers:
+        - name: product-service
+          image: "{{ .Values.productService.image.repository }}:{{ .Values.productService.image.tag }}"
+          imagePullPolicy: {{ .Values.productService.image.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.productService.service.targetPort }}
+              protocol: TCP
+
+          envFrom:
+            - configMapRef:
+                name: product-service-config
+
+            - secretRef:
+                name: {{ .Values.productService.secret.name }}

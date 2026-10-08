@@ -1,0 +1,326 @@
+---
+# Source: ecommerce/templates/cart-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: cart-service-config
+  labels:
+    app: cart-service
+
+data:
+  PORT: "4002"
+  REDIS_URL: "redis://redis:6379"
+  PRODUCT_SERVICE_URL: "http://product-service:4001"
+  CORS_ORIGIN: "http://localhost:3000"
+---
+# Source: ecommerce/templates/product-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: product-service-config
+  labels:
+    app: product-service
+
+data:
+  PORT: "4001"
+  CORS_ORIGIN: "http://localhost:3000"
+---
+# Source: ecommerce/templates/cart-service.yaml
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: cart-service
+  labels:
+    app: cart-service
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: cart-service
+
+  ports:
+    - name: http
+      protocol: TCP
+      port: 4002
+      targetPort: 4002
+---
+# Source: ecommerce/templates/frontend-service.yaml
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: frontend
+
+  ports:
+    - name: http
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
+# Source: ecommerce/templates/product-service.yaml
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: product-service
+  labels:
+    app: product-service
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: product-service
+
+  ports:
+    - name: http
+      protocol: TCP
+      port: 4001
+      targetPort: 4001
+---
+# Source: ecommerce/templates/redis-service.yaml
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: redis
+  labels:
+    app: redis
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: redis
+
+  ports:
+    - name: redis
+      protocol: TCP
+      port: 6379
+      targetPort: 6379
+---
+# Source: ecommerce/templates/cart-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: cart-service
+  labels:
+    app: cart-service
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: cart-service
+
+  template:
+    metadata:
+      labels:
+        app: cart-service
+
+    spec:
+      containers:
+        - name: cart-service
+          image: "ecommerce-cart-service:1.0"
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 4002
+              protocol: TCP
+
+          envFrom:
+            - configMapRef:
+                name: cart-service-config
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+---
+# Source: ecommerce/templates/frontend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+
+    spec:
+      containers:
+        - name: frontend
+          image: "ecommerce-frontend:2.0"
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+
+          env:
+            - name: PRODUCT_SERVICE_URL
+              value: "http://product-service:4001"
+
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+---
+# Source: ecommerce/templates/product-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: product-service
+  labels:
+    app: product-service
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: product-service
+
+  template:
+    metadata:
+      labels:
+        app: product-service
+
+    spec:
+      containers:
+        - name: product-service
+          image: "ecommerce-product-service:1.0"
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 4001
+              protocol: TCP
+
+          envFrom:
+            - configMapRef:
+                name: product-service-config
+
+            - secretRef:
+                name: product-service-secret
+---
+# Source: ecommerce/templates/redis-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: redis
+  labels:
+    app: redis
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: redis
+
+  template:
+    metadata:
+      labels:
+        app: redis
+
+    spec:
+      containers:
+        - name: redis
+          image: "redis:8-alpine"
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+---
+# Source: ecommerce/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: ecommerce-ingress
+
+spec:
+  ingressClassName: traefik
+
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 3000
+          - path: /api/products
+            pathType: Prefix
+            backend:
+              service:
+                name: product-service
+                port:
+                  number: 4001
+          - path: /api/cart
+            pathType: Prefix
+            backend:
+              service:
+                name: cart-service
+                port:
+                  number: 4002
